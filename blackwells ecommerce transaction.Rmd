@@ -1,0 +1,1189 @@
+---
+title: "Investigating Customers' Buying Patterns"
+author: "Mbah francis Somto"
+date: "2026-01-29"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 4
+    code_folding: hide
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+#introduction
+Understanding customer buying patterns is essential for making informed business decisions.Blackwell electronics , as one of the  leading retailers of electronics over the year, this project will analyze the utilization of eCommerce(online) website in driving sales. Data collected at Black well's-eCommerce customers transaction data over a year will be analyse to identify purchasing patterns between  on-line and in-store mode of purchase. 
+
+##Objectives
+The goal of this project is to identify purchasing patterns.while doing that, this project will like  to answer the following questions
+1: Do customers in different  regions spend more per transaction?( North, South, East and West) and which region spends the most
+
+2:if older customers buy more online than in-store according to our VP of sales, how much did they spend in total and per transaction? 
+
+3:what amount of electronic do older customers purchase per transaction. Do they buy more electronic online compared to younger customers who buys in-store? 
+
+4. Do the age of a customer influences how much customers spent per transaction and in total?* 
+5.can we predict the age of a customer base on: (i) in a region: are the difference in age of a customer in respect to a region.
+6: Is there any correlation between the age of a customers and the mode of transaction?
+7. can we predict alo the region of a customer?
+
+8. Do any variable affect the mode of purchase?can we predict the purchase channels from other variables in the transaction data.
+
+
+
+#loading required libraries
+
+```{r}
+library(readr)
+library(ggplot2)
+library(shiny)
+library(shinydashboard)
+library(shinythemes)
+library(dplyr)
+library(viridisLite)
+library(RColorBrewer)# for color palettes
+library(caret)
+library(rpart)
+library(randomForest)
+library(C50)
+library(corrplot)
+library(scales) #for color palettes
+
+```
+
+#loading dataset
+
+```{r}
+ecom <- read.csv("Demographic_Data (5).csv")
+```
+
+
+## Checking data using
+```{r}
+
+head(ecom)
+```
+
+## Checking data using
+```{r}
+tail(ecom)
+```
+
+## Checking data using
+```{r}
+names(ecom)
+```
+
+## Checking data using
+```{r}
+str(ecom)
+```
+
+##Blackwell Electronic customers transaction  data set  contains  5 variables with 80,000 observations  with 1 numerical and 5 integers.
+purchase_channels(categorical)
+age(integers)
+items(integers)
+amount(numerical)
+regions(integers)
+#below  variables was mapped to each labels containing:
+purchase channels;
+1: in store purchases
+0: online purchases
+Region Column;
+1: North
+2: South
+3: East
+4: West 
+
+
+#descriptive statistics of the dataset
+```{r}
+summary(ecom)
+```
+##Descriptive Statistics —The analysis provides insight into data distribution prior to modelling
+*Data_set shows a balanced split between online and offline purchases, supporting reliable modelling
+*Customer ages span 18–85, with an average around 46 years, representing a broad and economically active market
+*Transactions volume involve 4–5 items, indicating moderate basket sizes.
+*Transaction amount are right-skewed, with high-value purchases driving average revenue
+*Customers are well distributed across regions, enabling geographic insight into online sales behavior
+
+
+#Data Preprocessing and Transformation
+## Data Cleaning
+The dataset was checked for missing values, inconsistencies, and duplicates. Cleaning ensured that analytical results accurately reflected customer behavior without bias from incomplete or duplicated records.
+## Feature Engineering
+•	Age was grouped into meaningful age ranges to support segment-level analysis.
+•	Categorical variables (region and purchase channel) were converted into factor variables.
+ These steps ensured that the data was suitable for predictive modeling and interpretation.
+
+```{r}
+duplicated(ecom)
+```
+
+
+```{r}
+sum(duplicated(ecom))
+```
+##since there is a presence of a duplicate,we remove duplicated rows.
+
+```{r}
+ecom_clean <- ecom[!duplicated(ecom), ]
+```
+
+
+##missing values
+```{r}
+sum(is.na(ecom_clean))
+```
+*Blackwell Electronics customer's transaction data contain no missing values
+
+##identifyin outliers
+```{r}
+boxplot(ecom_clean$age)
+```
+##the thick horizontal line inside the blue box is the median.it approximately sits at  45yrs. meaning 50% of blackwell customers are below 45yrs and 50% are above 46yrs..Every customers falls within expected statistical age.few customers under 20 or over 80.the interquartile range (the blue box) shows where the middle (50%) of blackwell customers sit spanning from  late's 33s to late 50.
+
+```{r}
+boxplot(ecom_clean$amount)
+```
+
+##the thick horizontal line inside the blue box is the median.it  sits at approximately above $600.meaning 50% of blackwell transactions are below $600 and 50% are above $600.the interquartile range explain the range  business transactions operations occurs most( between $200 and $1,200). these are core revenue driving price bracket.the out-liers(the thick-black bar at the top): these are out-liers,the represents high or bulk purchases that are significantly more expensive than the average sale.
+
+
+
+#Exploratory Data Analysis (EDA) #mapping of numerical variables to categorical variables (age, and region)
+
+## Identifying the data we want to use and how to label it in our new data frame
+```{r}
+ecom_mapped  <- ecom_clean 
+```
+
+
+```{r}
+ecom_mapped$purchase_channels <- factor(ecom_mapped$purchase_channels,
+                        levels = c(0, 1),
+                        labels = c("online", "in-store"))
+#factor() convert numeric region codes into meaningful categorical labels
+```
+
+
+```{r}
+ecom_mapped$region <- factor(ecom_mapped$region,
+                        levels = c(1,2,3,4),
+                        labels = c("North", "South","East","West"))
+#factor() convert numeric region codes into meaningful categorical labels
+ecom_mapped$region
+```
+
+
+
+*performing data transformation on age column to age range*
+```{r}
+ecom_mapped$age_range <- cut(ecom_mapped$age,
+                        breaks = c(17, 40, 60, 85),
+                        labels = c("Adult", "Middle-Age", "Elderly"),
+                        right=TRUE)
+print(ecom_mapped$age_range)
+```
+
+*viewing mapped dataset*
+```{r}
+print(ecom_mapped)
+```
+
+##changing amount column to the nearest whole num
+```{r}
+
+ecom_mapped <- ecom_mapped %>%
+  mutate(amount = round(amount, digits = 0 ))
+
+```
+
+
+```{r}
+print(ecom_mapped)
+```
+
+
+
+#This section examines how customer activity varies across regions by counting the number of transactions.*
+```{r warning=FALSE}
+ggplot(ecom_mapped, aes(x = region)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by Region",
+    x = "Region",
+    y = "Transaction Count") +
+  theme_minimal()
+
+```
+Insight: The tallest bar represents the region with the highest transaction volume, indicating greater customer activity.the west region has more transaction count proceeded by the south region then Eastern and lastly the northern region.
+
+#relation betwn age-range
+```{r}
+ggplot(ecom_mapped, aes(x = age_range)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by age_range",
+    x = "age_range",
+    y = "Transaction Count") +
+  theme_minimal()
+
+```
+Insight: Adult and middle-aged customers account for the largest share of transactions, suggesting that these groups are the most commercially active.
+
+
+#This analysis compares transaction volume between online and in-store purchase channels.
+```{r}
+ggplot(ecom_mapped, aes(x = purchase_channels)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by purchase channels",
+    x = "purchase_channels",
+    y = "Transaction Count") +
+  theme_minimal()
+```
+Insight: Transaction volumes across channels are comparable, suggesting customers actively use both channels.
+
+#sum of revenu by region
+```{r}
+df2 <- aggregate(amount ~ region, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df2)
+
+```
+
+##A bar chart was used to visualize total revenue by region, with actual summed values displayed on each bar and formatted y-axis labels for readability.*
+
+```{r}
+
+ggplot(df2, aes(x = region, y = amount)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen",
+    width = 0.7) +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = paste0("₦", comma(..y..))),
+    vjust = -0.25,# vertical justification,controls the vertical position of the text.
+    size = 5,
+    fontface = "bold") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  labs(
+    title = "Total Revenue by Region",
+    x = "Region",
+    y = "Total Revenue") +
+  theme_minimal()
+
+```
+##Figure X shows the revenue generated across regions. The region with the tallest bar represents the highest revenue volume, indicating greater customer activity relative to other regions.
+##in our transaction volume, we saw that the west has more transaction which lead to more revenue generated. but this does not applies to other regions. with the east having fewer transaction compared to the SOUTH,the EAST generated more revenue than the south and north. same with the north region with fewer transaction count generated more  revenue than the south region.an increases in revenue in those region with fewer transaction-count indicate customers: purchase of high value electronic products per transaction which command high pricing'
+
+
+
+#Average purchase amount per transaction by region* 
+```{r}
+avg_amount <- aggregate(amount ~ region, data = ecom_mapped, mean)
+avg_amount 
+```
+
+#A bar chart was used to visualize the average transaction amount by region*
+```{r}
+
+ggplot(avg_amount, aes(x = region, y = amount, fill = region)) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = paste0("₦", comma(round(amount, 0)))),
+    vjust = -0.4,
+    size = 5,
+    fontface = "bold") +
+  labs(
+    title = "Average Amount Spent per Transaction by Region",
+    x = "Region",
+    y = "Average Amount (₦)") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  theme_minimal() 
+
+```
+##column chart showing the average amount spent per transaction in each region.  the observed that customers in the West region spend the most per transaction (over 1,000), followed by the East (about 850), the North (around 750), and the South, which has the lowest average spending (approximately 250 per transaction).
+
+
+
+#This shows comparison of customer-age demographics by region.
+```{r}
+ggplot(ecom_mapped, aes(x = region, fill = age_range)) +
+  geom_bar(
+    position = position_dodge(width = 0.8),
+    width = 0.7) +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Age Group Distribution by Region",
+    x = "Region",
+    y = "Number of Customers",
+    fill = "Age Group" ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 13),
+    plot.title = element_text(face = "bold", size = 16),
+    legend.position = "top" )
+
+
+```
+##insights:this explain the spending behaviour accross each region and the reason for more revenue generated. the west having the adult age and middle-age spending on electronic confirm the reason for increase revenue due to the fact that both age group are within working class or early hustlers who demand electronics in their homes.
+
+
+
+#items purchased in relation to amount 
+
+##total amount per item purchased*  
+```{r}
+average_price_per_item <- ecom_mapped %>%
+  group_by(items) %>%
+  summarise(
+    total_amount = sum(amount, na.rm = TRUE),#na.rm = TRUE ignore NA
+    Count = n())  # This tells you how many transactions are in each group
+average_price_per_item  
+```
+
+#grahical representation of total amount in relation to items purchased per transaction
+```{r}
+ggplot(average_price_per_item, aes(x = items, y = total_amount)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = total_amount), vjust = -0.5, size = 3) +  # numbers on top
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(title = "Total Amount Spent by Number of Items",
+       x = "Item",
+       y = "Total Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate x labels
+
+```
+##Insight:the analysis of items in relation with amount data reveals a nonlinear relationship between  the number of items purchased and the  amount spent.the plot which shows a peak buy when two or more items were purchased suggest a premium product purchases normally accompanied by a promoted or free item (secondary item).transactions having 8 items shows a decline in total spending indicates that customers purchasing less costly items or discounted commodities.
+
+
+##A scatter plot with a fitted linear regression line was used to analyze the relationship between the number of items purchased and the total transaction amount.*
+```{r}
+ggplot(average_price_per_item, aes(x = items, y = total_amount)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    title = "total Spent by Number of Items",
+    x = "Number of Items Purchased",
+    y = "total_amount"
+  ) +
+  theme_minimal()
+
+#se=false:standard error :The confidence interval around the regression line was suppressed using se = FALSE to improve visual clarity.
+
+```
+
+
+
+
+#age to quantity of  electronic purchased
+```{r}
+df3 <- aggregate(items ~ age_range, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df3)
+
+```
+
+#graphhical represntation of age in relationship with items(electronic purchased)
+```{r}
+ggplot(df3, aes(x = age_range, y = items)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen") +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = ..y..),
+    vjust = -0.5,
+    size = 3) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(
+    title = "Total Items by Age Range",
+    x = "Age Range",
+    y = "Total Items") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+##insights: adults purchases more electronics
+
+
+#age  to sum amount spent on electronics
+```{r}
+df4 <- aggregate(amount ~ age_range, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df4)
+
+```
+
+##graphical representation of age to amount spent 
+```{r}
+ggplot(df4, aes(x = age_range, y = amount)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen") +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = comma(..y..)),  # adds commas to numbers on top
+    vjust = -0.5,
+    size = 3) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(
+    title = "Total Amount Spent by Age Range",
+    x = "Age Range",
+    y = "Total Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+##insight: adult spends more
+
+#differences in age related to purchase-channel by transaction count*
+```{r}
+ggplot(ecom_mapped, aes(x = age_range, fill = purchase_channels)) +
+  geom_bar(position = position_dodge(width = 0.9)) +
+  geom_text(
+    stat = "count",
+    aes(label = comma(..count..)),
+    position = position_dodge(width = 0.9),
+    vjust = -0.5,
+    size = 3 ) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Customer Age-Range by Purchase Model",
+    x = "Age Range",
+    y = "Number of Transactions",
+    fill = "Purchase Mode") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+##from the vp of sales, the null hypothesis which says the elderly shops in-store is rejected. the graph above explain that the elderly shops online more*(alternative hpoyhesis is  accepted).
+
+
+
+#age and region(can we predict age of a customer in a region)*
+```{r}
+ggplot(ecom_mapped, aes(x = age_range, fill = region)) +
+  geom_bar(position = position_dodge(width = 0.9)) +
+  geom_text(
+    stat = "count",
+    aes(label = comma(..count..)),
+    position = position_dodge(width = 0.9),
+    vjust = -0.5,
+    size = 3) +
+  scale_fill_brewer(palette = "Set2") +  # color-blind friendly palette
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Age Distribution of Customers by Region",
+    x = "Age Range",
+    y = "Number of Customers",
+    fill = "Region") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+##more  adult customers are found in the WEST region and the EAST regions. while elderly are  in the south.
+
+#BUIILDING OUR MODEL
+
+##Correlation analysis was used to assess relationships among predictors.close related predictors were identified. Variables with high correlation were considered to provide overlapping information, and those with lower importance were excluded to reduce multicollinearity.
+*blue (cooler) colors show a positive relationship and red (warmer) colors indicate more negative relationships*
+
+
+```{r}
+corrData <- cor(ecom_clean)
+corrData
+```
+
+
+```{r}
+corrplot(corrData,tl.cex = 0.9)
+```
+
+
+#using variable import functions.it tells you which variables the model relies on most to make accurate predictions.Importance records were obtained from a tree-based model-Random Forest, which evaluates predictors based on their contribution to reducing prediction error across trees.
+
+*selecting predictors using varimport(purchase_mode~classification)*
+```{r}
+importance_modeL_purchase_mode <- randomForest(purchase_channels ~., data = ecom_mapped, importance = TRUE)
+
+```
+
+
+```{r}
+importance_modeL_purchase_mode
+```
+
+
+```{r}
+varImpPlot(importance_modeL_purchase_mode)
+```
+##The analysis revealed that region and amount were the most influential predictors, while other variables showed minimal contribution.
+
+
+#building a model for prediction of purchase channels
+The modelling process followed a rigorous and systematic framework:
+1.	Data partitioning into training and testing sets
+2.	Model training using multiple algorithms
+3.	Repeated cross-validation for robustness
+     To ensure robust model evaluation and reduce overfitting, repeated k-fold cross-validation was employed. Specifically, 10-fold cross-validation was repeated 10 times, resulting in 100 resampling iterations. Model performance metrics were averaged across all resamples to obtain stable and reliable estimates.
+4.	Feature selection using correlation and importance analysis
+5.	Testing on unseen data
+6.	Model comparison and final selection using confusion metrix for classification analysis and using Rsquared value for regression anaalysis
+
+#models used for predictive analysis
+
+```{r}
+
+set.seed(3456)
+trainIndex <- createDataPartition(ecom_mapped$purchase_channels, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex)
+```
+
+
+```{r}
+set.seed(3456)
+purchase_respTrain <- ecom_mapped[ trainIndex,]
+purchase_respTest  <- ecom_mapped[-trainIndex,]
+```
+
+
+```{r}
+purchase_respTrain
+```
+
+
+```{r}
+purchase_respTest
+```
+
+
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10)
+```
+
+#model training for purchase channel predictions
+```{r}
+set.seed(3456)
+#pur_gbmFit1 <- train(purchase_channels ~ region+age+amount, data = purchase_respTrain, 
+                # method = "gbm", 
+                # trControl = fitControl,
+                 ## This last option is actually one
+                 ## for gbm() that passes through
+                 #verbose = FALSE)
+
+#pur_gbmFit1
+```
+
+
+
+```{r}
+#saveRDS(pur_gbmFit1, "pur_gbmFit1_model.rds")
+pur_gbm_model <- readRDS("pur_gbmFit1_model.rds")
+pur_gbm_model
+```
+
+
+```{r warning=FALSE}
+#pur_C5.0Fit1 <- train(purchase_channels ~ region+age+amount, data = purchase_respTrain, 
+                 #method = "C5.0", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for C5.0() that passes through
+                 #verbose = FALSE)
+
+
+#pur_C5.0Fit1
+```
+
+
+```{r}
+pur_c5.0_model <- readRDS("pur_C5.0Fit1_model.rds")
+pur_c5.0_model
+#saveRDS(pur_C5.0Fit1,"pur_C5.0Fit1_model.rds")
+```
+
+
+#partial least squared model
+```{r}
+#pur_plsFit1 <- train(purchase_channels ~ region+age+amount, data = purchase_respTrain, 
+                 #method = "pls", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for pls() that passes through
+                 #verbose = FALSE)
+#pur_plsFit1
+```
+
+
+```{r}
+#saveRDS(pur_plsFit1,"pur_plsFit1_model.rds")
+pur_pls_model <- readRDS("pur_plsFit1_model.rds")
+pur_pls_model
+```
+
+
+
+#Testing of our models using Fucntion predict##
+
+```{r}
+purchase_gbm_predict <- predict(pur_gbm_model, newdata = purchase_respTest)
+```
+
+
+```{r}
+purchase_gbm_predict
+```
+
+```{r}
+plot(purchase_gbm_predict)
+```
+
+
+#testing for partial least square
+```{r}
+purchase_pls_predict <- predict(pur_pls_model, newdata = purchase_respTest)
+```
+
+
+```{r}
+purchase_pls_predict
+```
+
+
+
+```{r}
+plot(purchase_pls_predict)
+```
+
+
+#testing C5.0
+```{r}
+purchase_C5.0_predict <- predict(pur_c5.0_model, newdata = purchase_respTest)
+```
+
+
+```{r}
+purchase_C5.0_predict
+```
+
+
+```{r}
+plot(purchase_C5.0_predict)
+```
+
+
+#selecting the best model using confusion_matrix#
+```{r}
+gbm_confusion_purchase <- confusionMatrix(data=purchase_gbm_predict, reference = purchase_respTest$purchase_channels)
+```
+ 
+
+```{r}
+gbm_confusion_purchase
+```
+
+
+```{r}
+
+pls_confusion_purchase <- confusionMatrix(data=purchase_pls_predict, reference =purchase_respTest$purchase_channels)
+```
+ 
+
+```{r}
+pls_confusion_purchase
+```
+
+#C5.0
+```{r}
+
+C5.0_confusion_purchase <- confusionMatrix(data=purchase_C5.0_predict, reference =purchase_respTest$purchase_channels)
+```
+ 
+
+```{r}
+C5.0_confusion_purchase 
+```
+
+#Insight from confusion metrix
+#on idea of accuracy paradox, model effeciency will be based on the model with the lowest forced negatives , thereby our final model will be built on gbm
+
+#selecting predictors using varimport*(age)regression
+```{r}
+importance_model_AGE <- randomForest(age ~., data = ecom_mapped, importance = TRUE)
+
+```
+
+
+```{r}
+importance_model_AGE
+```
+
+```{r}
+varImpPlot(importance_model_AGE)
+```
+
+##model training
+```{r}
+
+set.seed(234)
+trainIndex2 <- createDataPartition(ecom_mapped$age, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex2)
+```
+
+
+```{r}
+set.seed(234)
+age_respTrain <- ecom_mapped[ trainIndex2,]
+age_respTest  <- ecom_mapped[-trainIndex2,]
+```
+
+
+```{r}
+age_respTrain
+```
+
+
+```{r}
+age_respTest
+```
+
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10)
+```
+
+
+```{r warning=FALSE}
+set.seed(234)
+
+#a_lmFit1 <- train(age ~ region+purchase_channels, data = age_respTrain, 
+                 #method = "lm", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for lm() that passes through
+                 #verbose = FALSE)
+#a_lmFit1
+```
+
+
+```{r}
+a_lmFit1 <- readRDS("a_lmFit1_model.rds")
+a_lmFit1
+#saveRDS(a_lmFit1,"a_lmFit1_model.rds")
+```
+
+
+
+```{r warning=FALSE}
+
+#a_rfFit1 <- train(age ~ region+purchase_channels, data = age_respTrain, 
+                # method = "rf", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for rf() that passes through
+                 #verbose = FALSE)
+
+
+#a_rfFit1
+```
+
+
+```{r}
+#saveRDS(a_rfFit1,"a_rfFit1_model.rds")
+a_rfFit1 <- readRDS("a_rfFit1_model.rds")
+a_rfFit1
+```
+
+
+```{r warning=FALSE}
+#a_plsFit3 <- train(age ~ region+purchase_channels, data = age_respTrain, 
+                # method = "pls", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for pls() that passes through
+                 #verbose = FALSE)
+#a_plsFit3
+```
+
+
+```{r}
+a_plsFit3 <- readRDS("a_plsFit3_model.rds")
+a_plsFit3
+#saveRDS(a_plsFit3,"a_plsFit3_model.rds")
+```
+
+
+#Testing of our models using Fucntion predict
+```{r}
+age_lm_predict <- predict(a_lmFit1, newdata = age_respTest)
+```
+
+
+```{r}
+age_lm_predict
+```
+
+#comparing predictions with Actual values FOR lm
+```{r}
+comparison_lm <- data.frame(actual = age_respTest$age, predicted = age_lm_predict)
+comparison_lm
+```
+
+#Actual vs Predicted Scatter Plot*
+```{r}
+
+ggplot(comparison_lm, aes(x = actual, y = predicted)) +
+  geom_point(alpha = 0.6, color = "darkblue") +
+  geom_abline(slope = 1, intercept = 0, 
+              color = "red", linetype = "dashed") +
+  labs(
+    title = "linear Regression model: Actual vs Predicted Age",
+    x = "Actual Age",
+    y = "Predicted Age"
+  ) +
+  theme_minimal()
+
+```
+##The red diagonal line is the standard reference for judging how close your predictions are to the true values.in this case,Predictions collapse into horizontal bands,Because the predictors are categorical, the model estimates conditional mean ages for each customer segment. this predictions does not account for individual-level variation, resulting in regression toward the mean.
+
+
+#testing for rf
+```{r}
+age_rf_predict <- predict(a_rfFit1, newdata = age_respTest)
+```
+
+
+```{r}
+age_rf_predict
+```
+
+
+```{r}
+plot(age_rf_predict)
+```
+
+#testing pls
+```{r}
+age_pls_predict <- predict(a_plsFit3, newdata = age_respTest)
+```
+
+
+```{r}
+age_pls_predict
+```
+
+
+```{r}
+plot(age_pls_predict)
+```
+
+
+```{r}
+pred_result  <- data.frame(rf = age_rf_predict,
+                           lm =age_lm_predict,
+                           pls = age_pls_predict)
+```
+
+
+```{r}
+head(pred_result)
+```
+
+#forming a new column or table contain actual age and predicted ages for each models
+```{r}
+age_results_tab <- age_respTest %>% mutate (Actual = age,
+                                            Pred_lm = age_lm_predict,
+                                            Pred_rf = age_rf_predict,
+                                            Pred_pls = age_pls_predict
+                                            ) %>% select( Actual, Pred_lm, Pred_rf,
+                                                         Pred_pls )
+age_results_tab
+```
+
+##from the predictive analysis using lm, rf, and pls, none of the predictor(purchase channels and region) was able to predict the age of a customers. all show poor Rsquared value less than  0.3.
+
+
+
+#selecting predictors using varimport*(region)claasification
+```{r}
+importance_regionn_model <- randomForest(region ~., data = ecom_mapped, importance = TRUE)
+
+```
+
+
+```{r}
+importance_regionn_model
+```
+
+
+```{r}
+varImpPlot(importance_regionn_model)
+```
+
+
+
+#predictive_modellimg for region
+
+```{r}
+
+set.seed(432)
+trainIndex3 <- createDataPartition(ecom_mapped$region, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex3)
+```
+
+
+```{r}
+set.seed(432)
+rg_respTrain <- ecom_mapped[ trainIndex3,]
+rg_respTest  <- ecom_mapped[-trainIndex3,]
+```
+
+
+```{r}
+rg_respTest
+```
+
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10)
+```
+
+
+```{r warning=FALSE}
+#rg_rfFit1<- train(region ~ age+purchase_channels+amount, data = rg_respTrain, 
+                 #method = "rf",
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for rf() that passes through
+                 #verbose = FALSE)
+#rg_rfFit1
+```
+
+
+```{r}
+#saveRDS(rg_rfFit1,"rg_rfFit1_model.rds")
+rg_rfFit1 <- readRDS("rg_rfFit1_model.rds")
+rg_rfFit1
+```
+
+
+
+```{r}
+plot(rg_rfFit1)
+```
+##acuracy decreases as more randomly selected predictors are added
+
+```{r warning=FALSE}
+#rg_C5.0Fit1 <- train(region ~ purchase_channels+age+amount, data = rg_respTrain, 
+                # method = "C5.0", 
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for C5.0() that passes through
+                 #verbose = FALSE)
+
+
+#rg_C5.0Fit1
+```
+
+
+```{r}
+#saveRDS(rg_C5.0Fit1,"rg_C5.0Fit1_model.rds")
+rg_C5.0Fit1 <- readRDS("rg_C5.0Fit1_model.rds")
+rg_C5.0Fit1
+```
+
+
+```{r}
+#rg_gbmFit1 <- train(region ~ purchase_channels+age+amount, data = rg_respTrain, 
+                 #method = "gbm",
+                 #trControl = fitControl,
+                 ## This last option is actually one
+                 ## for gbm() that passes through
+                 #verbose = FALSE)
+#rg_gbmFit1
+```
+
+
+```{r}
+#saveRDS(rg_gbmFit1,"rg_gbmFit1_model.rds")
+rg_gbmFit1 <- readRDS("rg_gbmFit1_model.rds")
+rg_gbmFit1
+```
+
+
+
+#Testing of our models using Fucntion predict##
+
+```{r}
+rg_gbm_predict <- predict(rg_gbmFit1, newdata = rg_respTest)
+```
+
+
+```{r}
+rg_gbm_predict
+```
+
+
+```{r}
+plot(rg_gbm_predict)
+```
+
+
+
+
+```{r}
+rg_rf_predict <- predict(rg_rfFit1, newdata = rg_respTest)
+```
+
+
+```{r}
+rg_rf_predict
+```
+
+
+```{r}
+plot(rg_rf_predict)
+```
+
+
+```{r}
+rg_C5.0_predict <- predict(rg_C5.0Fit1, newdata = rg_respTest)
+```
+
+
+```{r}
+rg_C5.0_predict
+```
+
+
+```{r}
+plot(rg_C5.0_predict)
+```
+
+#selecting the best model using confusion_matrix# data must be categorically
+```{r}
+gbm_confusion_rg <- confusionMatrix(data=rg_gbm_predict, reference = rg_respTest$region)
+```
+ 
+
+```{r}
+gbm_confusion_rg
+```
+
+for random forest
+```{r}
+
+rf_confusion_rg <- confusionMatrix(data=rg_rf_predict, reference =rg_respTest$region)
+```
+ 
+
+```{r}
+rf_confusion_rg
+```
+
+
+```{r}
+
+C5.0_confusion_rg <- confusionMatrix(data= rg_C5.0_predict, reference =rg_respTest$region)
+```
+ 
+
+```{r}
+C5.0_confusion_rg 
+```
+
+##C5.0 did best
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
