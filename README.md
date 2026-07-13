@@ -79,7 +79,7 @@ ecom_mapped$age_range <- cut(ecom_mapped$age,
 ````
 
 
-4. **Trend Analysis** — monthly revenue trends and seasonality
+4. ** 📈  Trend Analysis and 💹 Visualizations** — monthly revenue trends and seasonality
 
 
 
