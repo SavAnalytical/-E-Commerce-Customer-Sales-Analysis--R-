@@ -1,0 +1,414 @@
+
+
+
+```{r}
+library(readr)
+library(ggplot2)
+library(scales) #for color palettes
+
+```
+
+#loading dataset
+
+```{r}
+ecom <- read.csv("Demographic_Data (5).csv")
+```
+
+
+## Checking data using
+```{r}
+
+head(ecom)
+```
+
+## Checking data using
+```{r}
+tail(ecom)
+```
+
+## Checking data using
+```{r}
+names(ecom)
+```
+
+## Checking data using
+```{r}
+str(ecom)
+```
+
+
+
+
+
+#descriptive statistics of the dataset
+```{r}
+summary(ecom)
+```
+
+#Data Preprocessing and Transformation
+```{r}
+duplicated(ecom)
+```
+
+
+```{r}
+sum(duplicated(ecom))
+```
+
+```{r}
+ecom_clean <- ecom[!duplicated(ecom), ]
+```
+
+
+##missing values
+```{r}
+sum(is.na(ecom_clean))
+```
+
+## identifying outliers
+
+```{r}
+boxplot(ecom_clean$amount)
+```
+
+
+
+
+#Exploratory Data Analysis (EDA) #mapping of numerical variables to categorical variables (age and region)
+
+## Identifying the data we want to use and how to label it in our new data frame
+```{r}
+ecom_mapped  <- ecom_clean 
+```
+
+
+```{r}
+ecom_mapped$purchase_channels <- factor(ecom_mapped$purchase_channels,
+                        levels = c(0, 1),
+                        labels = c("online", "in-store"))
+#factor() convert numeric region codes into meaningful categorical labels
+```
+
+
+```{r}
+ecom_mapped$region <- factor(ecom_mapped$region,
+                        levels = c(1,2,3,4),
+                        labels = c("North", "South","East","West"))
+#factor() convert numeric region codes into meaningful categorical labels
+ecom_mapped$region
+```
+
+
+
+*performing data transformation on the age column to age range*
+```{r}
+ecom_mapped$age_range <- cut(ecom_mapped$age,
+                        breaks = c(17, 40, 60, 85),
+                        labels = c("Adult", "Middle-Aged", "Elderly"),
+                        right=TRUE)
+print(ecom_mapped$age_range)
+```
+
+*viewing mapped dataset*
+```{r}
+print(ecom_mapped)
+```
+
+##changing amount column to the nearest whole num
+```{r}
+
+ecom_mapped <- ecom_mapped %>%
+  mutate(amount = round(amount, digits = 0 ))
+
+```
+
+
+```{r}
+print(ecom_mapped)
+```
+
+
+
+*his section examines how customer activity varies across regions by counting the number of transactions.*
+```{r warning=FALSE}
+ggplot(ecom_mapped, aes(x = region)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by Region",
+    x = "Region",
+    y = "Transaction Count") +
+  theme_minimal()
+
+```
+
+
+#relation between age-range
+```{r}
+ggplot(ecom_mapped, aes(x = age_range)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by age_range",
+    x = "age_range",
+    y = "Transaction Count") +
+  theme_minimal()
+
+```
+
+
+
+## This analysis compares transaction volume between online and in-store purchase channels.
+```{r}
+ggplot(ecom_mapped, aes(x = purchase_channels)) +
+  geom_bar(fill = "steelblue") +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Number of Transactions by purchase channels",
+    x = "purchase_channels",
+    y = "Transaction Count") +
+  theme_minimal()
+```
+
+
+## sum of revenue by region
+```{r}
+df2 <- aggregate(amount ~ region, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df2)
+
+```
+
+
+```{r}
+
+ggplot(df2, aes(x = region, y = amount)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen",
+    width = 0.7) +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = paste0("₦", comma(..y..))),
+    vjust = -0.25,# vertical justification, controls the vertical position of the text.
+    size = 5,
+    fontface = "bold") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  labs(
+    title = "Total Revenue by Region",
+    x = "Region",
+    y = "Total Revenue") +
+  theme_minimal()
+
+```
+
+
+
+*Average purchase amount per transaction by region* 
+```{r}
+avg_amount <- aggregate(amount ~ region, data = ecom_mapped, mean)
+avg_amount 
+```
+
+#A bar chart was used to visualize the average transaction amount by region*
+```{r}
+
+ggplot(avg_amount, aes(x = region, y = amount, fill = region)) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = paste0("₦", comma(round(amount, 0)))),
+    vjust = -0.4,
+    size = 5,
+    fontface = "bold") +
+  labs(
+    title = "Average Amount Spent per Transaction by Region",
+    x = "Region",
+    y = "Average Amount (₦)") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  theme_minimal() 
+
+```
+
+#This shows a comparison of customer-age demographics by region.
+```{r}
+ggplot(ecom_mapped, aes(x = region, fill = age_range)) +
+  geom_bar(
+    position = position_dodge(width = 0.8),
+    width = 0.7) +
+  geom_text(
+    stat = "count",
+    aes(label = ..count..),
+    position = position_dodge(width = 0.8),
+    vjust = -0.3,
+    size = 4,
+    fontface = "bold" ) +
+  labs(
+    title = "Age Group Distribution by Region",
+    x = "Region",
+    y = "Number of Customers",
+    fill = "Age Group" ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 13),
+    plot.title = element_text(face = "bold", size = 16),
+    legend.position = "top" )
+
+
+```
+
+
+### items purchased in relation to the amount 
+
+*total amount per item purchased*  
+```{r}
+average_price_per_item <- ecom_mapped %>%
+  group_by(items) %>%
+  summarise(
+    total_amount = sum(amount, na.rm = TRUE),#na.rm = TRUE ignore NA
+    Count = n())  # This tells you how many transactions are in each group
+average_price_per_item  
+```
+
+```{r}
+ggplot(average_price_per_item, aes(x = items, y = total_amount)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = total_amount), vjust = -0.5, size = 3) +  # numbers on top
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(title = "Total Amount Spent by Number of Items",
+       x = "Item",
+       y = "Total Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate x labels
+
+```
+
+
+*A scatter plot with a fitted linear regression line was used to analyze the relationship between the number of items purchased and the total transaction amount.*
+```{r}
+ggplot(average_price_per_item, aes(x = items, y = total_amount)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    title = "total Spent by Number of Items",
+    x = "Number of Items Purchased",
+    y = "total_amount"
+  ) +
+  theme_minimal()
+
+#se=false: standard error: The confidence interval around the regression line was suppressed using se = FALSE to improve visual clarity.
+
+```
+
+
+
+
+*age to the quantity of  electronics purchased
+```{r}
+df3 <- aggregate(items ~ age_range, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df3)
+
+```
+
+# graphical representation of age in relationship with items(electronic purchased)
+```{r}
+ggplot(df3, aes(x = age_range, y = items)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen") +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = ..y..),
+    vjust = -0.5,
+    size = 3) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(
+    title = "Total Items by Age Range",
+    x = "Age Range",
+    y = "Total Items") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+*age  to sum the amount spent on electronics
+```{r}
+df4 <- aggregate(amount ~ age_range, data=ecom_mapped, FUN = sum, na.rm=TRUE)
+head(df4)
+
+```
+
+## graphical representation of age to amount spent 
+```{r}
+ggplot(df4, aes(x = age_range, y = amount)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen") +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = comma(..y..)),  # adds commas to numbers on top
+    vjust = -0.5,
+    size = 3) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +  # y-axis with commas
+  labs(
+    title = "Total Amount Spent by Age Range",
+    x = "Age Range",
+    y = "Total Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+#differences in age related to purchase-channel by transaction count*
+```{r}
+ggplot(ecom_mapped, aes(x = age_range, fill = purchase_channels)) +
+  geom_bar(position = position_dodge(width = 0.9)) +
+  geom_text(
+    stat = "count",
+    aes(label = comma(..count..)),
+    position = position_dodge(width = 0.9),
+    vjust = -0.5,
+    size = 3 ) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Customer Age-Range by Purchase Model",
+    x = "Age Range",
+    y = "Number of Transactions",
+    fill = "Purchase Mode") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+
+
