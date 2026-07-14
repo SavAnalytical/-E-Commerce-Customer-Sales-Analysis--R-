@@ -3,9 +3,25 @@
 
 
 
-### Table of Contents
 
----
+### Table of Contents
+[Project Overview](#ProjectOverview)
+
+[Data source](#Datasource)
+
+[Tools & Libraries](#Tools&Libraries)
+
+[Methodology](#Methodology)
+
+[Trend Analysis and 💹 Visualizations](#TrendAnalysisand💹Visualizations)
+
+[Recommendation](#Recommendation)
+
+[Author](#Author)
+
+
+
+
 
 ### 🌐 Project Overview
 The goal of this project is to identify purchasing patterns. While doing that, this project aims to answer the following questions.
@@ -237,8 +253,8 @@ This indicates *higher-value purchases per customer*
 Business Implication: Blackwell should: - Focus premium product marketing in high-value regions - Avoid judging performance based only on transaction count'
 
 
-
-
+## 👤 Author
+*If you found this project useful or interesting, a ⭐ on the repo is appreciated!*
 
 
 
