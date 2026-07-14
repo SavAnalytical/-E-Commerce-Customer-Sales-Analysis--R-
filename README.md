@@ -3,21 +3,21 @@
 
 
 
-
 ### Table of Contents
-[Project Overview](#ProjectOverview)
 
-[Data source](#Datasource)
+-[Project Overview](#ProjectOverview)
 
-[Tools & Libraries](#Tools&Libraries)
+-[Data source](#Datasource)
 
-[Methodology](#Methodology)
+-[Tools & Libraries](#Tools&Libraries)
 
-[Trend Analysis and 💹 Visualizations](#TrendAnalysisand💹Visualizations)
+-[Methodology](#Methodology)
 
-[Recommendation](#Recommendation)
+-[Trend Analysis and 💹 Visualizations](#TrendAnalysisand💹Visualizations)
 
-[Author](#Author)
+-[Recommendation](#Recommendation)
+
+-[Author](#Author)
 
 
 
