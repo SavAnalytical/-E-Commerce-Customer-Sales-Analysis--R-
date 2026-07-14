@@ -4,8 +4,12 @@
 ---
 
 ### 🌐 Project Overview
-The goal of this project is to identify purchasing patterns. While doing that, this project would like  to answer the following questions?
+The goal of this project is to identify purchasing patterns. While doing that, this project aims to answer the following questions.
 
+     -  Total Revenue across each region?
+     
+     - Total transaction across each region?
+     
      - Do customers in different  regions spend more per transaction? ( North, South, East, and West) And which region spends the most? 
     
     -If older customers buy more online than in-store, according to our VP of sales, how much did they spend in total and per transaction? 
@@ -79,7 +83,82 @@ ecom_mapped$age_range <- cut(ecom_mapped$age,
 ````
 
 
-4. ** 📈  Trend Analysis and 💹 Visualizations** — monthly revenue trends and seasonality
+4. ** 📈  Trend Analysis and 💹 Visualizations** —
+   
+     Q1: Total Revenue
+```r
+ggplot(df2, aes(x = region, y = amount)) +
+  stat_summary(
+    fun = sum,
+    geom = "bar",
+    fill = "darkgreen",
+    width = 0.7) +
+  stat_summary(
+    fun = sum,
+    geom = "text",
+    aes(label = paste0("₦", comma(..y..))),
+    vjust = -0.25,# vertical justification, controls the vertical position of the text.
+    size = 5,
+    fontface = "bold") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  labs(
+    title = "Total Revenue by Region",
+    x = "Region",
+    y = "Total Revenue") +
+  theme_minimal()
+```
+<img width="1174" height="603" alt="Screenshot 2026-07-13 165133" src="https://github.com/user-attachments/assets/80f9972f-4aa8-4937-bd16-cf3842fbe260" />
+
+
+
+
+
+ Q3:Average transaction across each Region
+```r
+
+ggplot(avg_amount, aes(x = region, y = amount, fill = region)) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = paste0("₦", comma(round(amount, 0)))),
+    vjust = -0.4,
+    size = 5,
+    fontface = "bold") +
+  labs(
+    title = "Average Amount Spent per Transaction across each Region",
+    x = "Region",
+    y = "Average Amount (₦)") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(
+    labels = function(x) paste0("₦", comma(x))) +
+  theme_minimal()
+```
+<img width="1213" height="629" alt="Screenshot 2026-07-13 163054" src="https://github.com/user-attachments/assets/7c875871-2e18-4231-8dd1-0b6addb7f578" />
+
+---
+
+Q4: If older customers buy more online than in-store, according to our VP of sales, how much did they spend?
+
+```r
+ggplot(ecom_mapped, aes(x = age_range, fill = purchase_channels)) +
+  geom_bar(position = position_dodge(width = 0.9)) +
+  geom_text(
+    stat = "count",
+    aes(label = comma(..count..)),
+    position = position_dodge(width = 0.9),
+    vjust = -0.5,
+    size = 3 ) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Customer Age-Range by Purchase Model",
+    x = "Age Range",
+    y = "Number of Transactions",
+    fill = "Purchase Mode") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+<img width="1206" height="619" alt="Screenshot 2026-07-13 164311" src="https://github.com/user-attachments/assets/61d8fc93-5e08-43b4-9b76-332c5f61ea86" />
+
 
 
 
