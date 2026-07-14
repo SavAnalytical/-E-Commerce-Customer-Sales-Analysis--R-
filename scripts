@@ -129,7 +129,7 @@ print(ecom_mapped)
 
 
 
-*his section examines how customer activity varies across regions by counting the number of transactions.*
+*This section examines how customer activity varies across regions by counting the number of transactions.*
 ```{r warning=FALSE}
 ggplot(ecom_mapped, aes(x = region)) +
   geom_bar(fill = "steelblue") +
@@ -288,7 +288,7 @@ average_price_per_item <- ecom_mapped %>%
   group_by(items) %>%
   summarise(
     total_amount = sum(amount, na.rm = TRUE),#na.rm = TRUE ignore NA
-    Count = n())  # This tells you how many transactions are in each group
+    Count = n()  # This tells you how many transactions are in each group
 average_price_per_item  
 ```
 
