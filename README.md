@@ -5,19 +5,19 @@
 
 ### Table of Contents
 
--[Project Overview](#ProjectOverview)
+ -[Project Overview](#ProjectOverview)
 
--[Data source](#Datasource)
+ -[Data source](#Datasource)
 
--[Tools & Libraries](#Tools&Libraries)
+ -[Tools & Libraries](#Tools&Libraries)
 
--[Methodology](#Methodology)
+ -[Methodology](#Methodology)
 
--[Trend Analysis and 💹 Visualizations](#TrendAnalysisand💹Visualizations)
+ -[Trend Analysis and 💹 Visualizations](#TrendAnalysisand💹Visualizations)
 
--[Recommendation](#Recommendation)
+ -[Recommendation](#Recommendation)
 
--[Author](#Author)
+ -[Author](#Author)
 
 
 
